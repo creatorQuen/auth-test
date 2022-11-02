@@ -2,18 +2,26 @@ package main
 
 import (
 	"auth-test/config"
+	"auth-test/infrastructure/handlers"
+	"auth-test/infrastructure/repository"
+	"auth-test/infrastructure/services"
 	"auth-test/migrations"
+	"auth-test/pkg/logging"
 	"database/sql"
 	"fmt"
+	"github.com/go-playground/validator"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	bin "github.com/golang-migrate/migrate/v4/source/go_bindata"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
-	"log"
+	"net/http"
 )
 
 func main() {
+	log := logging.GetLogger()
+
 	var cnf config.Config
 	err := envconfig.Process("", &cnf)
 	if err != nil {
@@ -21,13 +29,21 @@ func main() {
 		return
 	}
 
-	migrateDB(&cnf)
+	migrateDB(&cnf, log)
+	db := connectDB(&cnf, log)
 
-	_ = connectDB(&cnf)
-	fmt.Println("Successful migrate")
+	repoAuthUser := repository.NewAuthUserRepositoryDb(db, log)
+	serviceAuthUser := services.NewAuthUserService(repoAuthUser, log)
+	handlerAuthUser := handlers.NewAuthUserHandler(serviceAuthUser, log)
+
+	e := echo.New()
+	e.Validator = &handlers.CustomValidator{Validator: validator.New()}
+	e.POST("/register", handlerAuthUser.Register)
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cnf.ListenPort), e))
 }
 
-func connectDB(conf *config.Config) (db *sql.DB) {
+func connectDB(conf *config.Config, log *logging.Logger) (db *sql.DB) {
 	psqlConnStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		conf.ConfigDataBase.Host, conf.ConfigDataBase.Port, conf.ConfigDataBase.User, conf.ConfigDataBase.Password, conf.ConfigDataBase.NameDataBase)
 	db, err := sql.Open("postgres", psqlConnStr)
@@ -41,7 +57,7 @@ func connectDB(conf *config.Config) (db *sql.DB) {
 	return
 }
 
-func migrateDB(conf *config.Config) {
+func migrateDB(conf *config.Config, log *logging.Logger) {
 	databaseURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=require",
 		conf.ConfigDataBase.User,
 		conf.ConfigDataBase.Password,
@@ -62,7 +78,7 @@ func migrateDB(conf *config.Config) {
 
 	if err = migration.Up(); err != nil {
 		if err == migrate.ErrNoChange {
-			log.Println(err)
+			log.Info(err)
 		} else {
 			log.Fatal(err)
 		}
