@@ -38,23 +38,47 @@ func (u *authUserRepositoryDB) CreateUser(ctx context.Context, authUser domain.A
 func (a *authUserRepositoryDB) GetAuthUserByEmail(ctx context.Context, email string) (*domain.AuthUser, error) {
 	query := `SELECT id, created_at, email, password_hash, login, phone FROM auth_users WHERE email=$1`
 
-	var user domain.AuthUser
+	var authUser domain.AuthUser
 	err := a.db.QueryRowContext(ctx, query, email).Scan(
-		&user.Id,
-		&user.CreatedAt,
-		&user.Email,
-		&user.PasswordHash,
-		&user.Login,
-		&user.Phone,
+		&authUser.Id,
+		&authUser.CreatedAt,
+		&authUser.Email,
+		&authUser.PasswordHash,
+		&authUser.Login,
+		&authUser.Phone,
 	)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		} else {
-			a.log.Error("error while scanning book " + err.Error())
+			a.log.Error("error while scanning auth_users " + err.Error())
 			return nil, lib.ErrUnexpectedFromDB
 		}
 	}
-	return &user, nil
+	return &authUser, nil
+}
+
+func (a *authUserRepositoryDB) GetAuthUserByLogin(ctx context.Context, login string) (*domain.AuthUser, error) {
+	query := `SELECT id, created_at, email, password_hash, login, phone FROM auth_users WHERE login=$1`
+
+	var authUser domain.AuthUser
+	err := a.db.QueryRowContext(ctx, query, login).Scan(
+		&authUser.Id,
+		&authUser.CreatedAt,
+		&authUser.Email,
+		&authUser.PasswordHash,
+		&authUser.Login,
+		&authUser.Phone,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			a.log.Error("error while scanning auth_users " + err.Error())
+			return nil, lib.ErrUnexpectedFromDB
+		}
+	}
+	return &authUser, nil
 }

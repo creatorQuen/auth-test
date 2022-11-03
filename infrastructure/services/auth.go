@@ -49,14 +49,25 @@ func (a *authUserService) CreateAuthUser(ctx context.Context, req dto.AuthUserRe
 	}
 	authUser.Phone = req.Phone
 
-	dbUser, err := a.repoAuthUser.GetAuthUserByEmail(ctx, authUser.Email)
+	dbUserByEmail, err := a.repoAuthUser.GetAuthUserByEmail(ctx, authUser.Email)
 	if err != nil {
 		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", err)
 		return "", err
 	}
-	if dbUser != nil {
-		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", lib.ErrUserAlreadyExist)
-		return "", lib.ErrUserAlreadyExist
+	if dbUserByEmail != nil {
+		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", lib.ErrUserEmailAlreadyExist)
+		return "", lib.ErrUserEmailAlreadyExist
+	}
+
+	authUser.Login = strings.TrimSpace(req.Login)
+	dbUserByLogin, err := a.repoAuthUser.GetAuthUserByLogin(ctx, authUser.Login)
+	if err != nil {
+		a.log.Error("repoAuthUser.GetAuthUserByLogin: ", err)
+		return "", err
+	}
+	if dbUserByLogin != nil {
+		a.log.Error("repoAuthUser.GetAuthUserByLogin: ", lib.ErrUserLoginAlreadyExist)
+		return "", lib.ErrUserLoginAlreadyExist
 	}
 
 	authUser.CreatedAt = time.Now().Format(lib.DbTLayout)
