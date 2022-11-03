@@ -15,6 +15,7 @@ import (
 	bin "github.com/golang-migrate/migrate/v4/source/go_bindata"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	_ "github.com/lib/pq"
 	"net/http"
 )
@@ -33,12 +34,18 @@ func main() {
 	db := connectDB(&cnf, log)
 
 	repoAuthUser := repository.NewAuthUserRepositoryDb(db, log)
-	serviceAuthUser := services.NewAuthUserService(repoAuthUser, log, cnf.Salt)
+	serviceAuthUser := services.NewAuthUserService(repoAuthUser, log, &cnf)
 	handlerAuthUser := handlers.NewAuthUserHandler(serviceAuthUser, log)
 
 	e := echo.New()
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{http.MethodPost},
+	}))
+
 	e.Validator = &handlers.CustomValidator{Validator: validator.New()}
 	e.POST("/register", handlerAuthUser.Register)
+	e.POST("/login", handlerAuthUser.Login)
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cnf.ListenPort), e))
 }

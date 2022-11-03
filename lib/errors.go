@@ -11,4 +11,6 @@ var (
 	ErrUnexpectedFromDB      = errors.New("unexpected database error")
 	ErrUserEmailAlreadyExist = errors.New("email already exist")
 	ErrUserLoginAlreadyExist = errors.New("login already exist")
+	ErrPasswordNotEqual      = errors.New("password not equal")
+	ErrUserNotExist          = errors.New("user not exist")
 )
