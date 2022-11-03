@@ -42,7 +42,17 @@ func (a *authUserService) CreateAuthUser(ctx context.Context, req dto.AuthUserRe
 		a.log.Error(lib.ErrNotValidPassword)
 		return "", lib.ErrNotValidPassword
 	}
-	
+
+	dbUser, err := a.repoAuthUser.GetAuthUserByEmail(ctx, authUser.Email)
+	if err != nil {
+		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", err)
+		return "", err
+	}
+	if dbUser != nil {
+		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", lib.ErrUserAlreadyExist)
+		return "", lib.ErrUserAlreadyExist
+	}
+
 	authUser.CreatedAt = time.Now().Format(lib.DbTLayout)
 	authUser.PasswordHash = generatePasswordHash(req.Password, a.salt)
 	authUser.Login = req.Login
