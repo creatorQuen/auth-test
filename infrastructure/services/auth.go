@@ -43,6 +43,12 @@ func (a *authUserService) CreateAuthUser(ctx context.Context, req dto.AuthUserRe
 		return "", lib.ErrNotValidPassword
 	}
 
+	if !isValidPhone(req.Phone) {
+		a.log.Error(lib.ErrNoteValidPhone)
+		return "", lib.ErrNoteValidPhone
+	}
+	authUser.Phone = req.Phone
+
 	dbUser, err := a.repoAuthUser.GetAuthUserByEmail(ctx, authUser.Email)
 	if err != nil {
 		a.log.Error("repoAuthUser.GetAuthUserByEmail: ", err)
@@ -56,7 +62,6 @@ func (a *authUserService) CreateAuthUser(ctx context.Context, req dto.AuthUserRe
 	authUser.CreatedAt = time.Now().Format(lib.DbTLayout)
 	authUser.PasswordHash = generatePasswordHash(req.Password, a.salt)
 	authUser.Login = req.Login
-	authUser.Phone = req.Phone
 
 	return a.repoAuthUser.CreateUser(ctx, authUser)
 }
