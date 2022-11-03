@@ -8,5 +8,6 @@ type Config struct {
 		Password     string `envconfig:"PASSWORD_DB"`
 		NameDataBase string `envconfig:"NAME_DB"`
 	}
-	ListenPort int `envconfig:"LISTEN_PORT"`
+	ListenPort int    `envconfig:"LISTEN_PORT"`
+	Salt       string `envconfig:"SALT"`
 }

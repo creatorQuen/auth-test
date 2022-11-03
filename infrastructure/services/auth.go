@@ -7,15 +7,22 @@ import (
 	"auth-test/lib"
 	"auth-test/pkg/logging"
 	"context"
+	"crypto/sha1"
+	"fmt"
+	"strings"
 	"time"
 )
 
 type authUserService struct {
 	repoAuthUser repository.AuthUserRepo
 	log          *logging.Logger
+	salt         string
 }
 
-func NewAuthUserService(repoAuthUser repository.AuthUserRepo, log *logging.Logger) *authUserService {
+func NewAuthUserService(repoAuthUser repository.AuthUserRepo, log *logging.Logger, salt string) *authUserService {
+	if salt == "" {
+		log.Fatal("salt is empty")
+	}
 	return &authUserService{
 		repoAuthUser: repoAuthUser,
 		log:          log,
@@ -25,11 +32,27 @@ func NewAuthUserService(repoAuthUser repository.AuthUserRepo, log *logging.Logge
 func (a *authUserService) CreateAuthUser(ctx context.Context, req dto.AuthUserRegisterReq) (index string, err error) {
 	var authUser domain.AuthUser
 
+	authUser.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if !isValidEmail(req.Email) {
+		a.log.Error(lib.ErrNotValidEmail)
+		return "", lib.ErrNotValidEmail
+	}
+
+	if !isValidPassword(req.Password) {
+		a.log.Error(lib.ErrNotValidPassword)
+		return "", lib.ErrNotValidPassword
+	}
+	
 	authUser.CreatedAt = time.Now().Format(lib.DbTLayout)
-	authUser.Email = req.Email
-	authUser.PasswordHash = req.Password
+	authUser.PasswordHash = generatePasswordHash(req.Password, a.salt)
 	authUser.Login = req.Login
 	authUser.Phone = req.Phone
 
 	return a.repoAuthUser.CreateUser(ctx, authUser)
+}
+
+func generatePasswordHash(password string, salt string) string {
+	hash := sha1.New()
+	hash.Write([]byte(password))
+	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }

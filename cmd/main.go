@@ -33,7 +33,7 @@ func main() {
 	db := connectDB(&cnf, log)
 
 	repoAuthUser := repository.NewAuthUserRepositoryDb(db, log)
-	serviceAuthUser := services.NewAuthUserService(repoAuthUser, log)
+	serviceAuthUser := services.NewAuthUserService(repoAuthUser, log, cnf.Salt)
 	handlerAuthUser := handlers.NewAuthUserHandler(serviceAuthUser, log)
 
 	e := echo.New()
